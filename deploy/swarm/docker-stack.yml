@@ -1,0 +1,345 @@
+# ============================================================
+# 富豪大转盘 · 全栈 Swarm 编排
+#   业务：nginx / gateway / app×2 / nacos / mysql
+#   监控：prometheus / grafana
+#   追踪：skywalking-oap / skywalking-ui
+#   日志：elasticsearch / kibana / filebeat
+# ============================================================
+
+networks:
+  tycoon_net:
+    driver: overlay
+
+volumes:
+  mysql-data:
+  nacos-data:
+  es-data:
+
+services:
+
+# ==================== 数据层 ====================
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root123.321
+      MYSQL_DATABASE: tycoon
+      MYSQL_USER: tycoon
+      MYSQL_PASSWORD: tycoon123
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      # dnsrr 不能配 ingress 端口，改用 host 模式（单节点无影响）
+      - target: 3306
+        published: 3306
+        mode: host
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      restart_policy: { condition: any, delay: 10s, max_attempts: 0 }
+      resources: { limits: { memory: 512M } }
+
+  nacos:
+    image: nacos/nacos-server:v2.4.3
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+      TZ: Asia/Shanghai
+    ports:
+      - target: 8848
+        published: 8848
+        mode: host
+      - target: 9848
+        published: 9848
+        mode: host
+    volumes:
+      - nacos-data:/home/nacos/data
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      # 关键：dnsrr 让客户端拿到任务 IP，避免 overlay VIP 打断 Nacos gRPC 握手
+      endpoint_mode: dnsrr
+      restart_policy: { condition: any, delay: 5s, max_attempts: 0 }
+      resources: { limits: { memory: 512M } }
+
+# ==================== 应用层 ====================
+  app:
+    image: 127.0.0.1:5000/tycoon-wheel:1.0.0
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: "8787"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: tycoon
+      DB_USER: tycoon
+      DB_PASSWORD: tycoon123
+      NACOS_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_DISCOVERY_FAIL_FAST: "false"
+      SW_AGENT_ENABLED: "true"
+      DUBBO_APPLICATION_REGISTERMODE: "application"
+      DUBBO_APPLICATION_REGISTER_MODE: "application"
+      SW_AGENT_NAME: tycoon-wheel
+      SW_AGENT_COLLECTOR: skywalking-oap:11800
+      TZ: Asia/Shanghai
+    networks: [tycoon_net]
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8787 || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 240s
+    deploy:
+      replicas: 2
+      endpoint_mode: dnsrr
+      update_config:
+        parallelism: 1
+        delay: 20s
+        order: start-first
+        failure_action: rollback
+      restart_policy: { condition: any, delay: 10s, max_attempts: 0 }
+      resources: { limits: { memory: 512M } }
+
+  # ==================== 用户微服务（Dubbo 提供者）====================
+  user:
+    image: 127.0.0.1:5000/tycoon-user:1.0.0
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: tycoon
+      DB_USER: tycoon
+      DB_PASSWORD: tycoon123
+      NACOS_ADDR: nacos:8848
+      SW_AGENT_ENABLED: "true"
+      DUBBO_APPLICATION_REGISTERMODE: "application"
+      DUBBO_APPLICATION_REGISTER_MODE: "application"
+      SW_AGENT_NAME: tycoon-user
+      SW_AGENT_COLLECTOR: skywalking-oap:11800
+      TZ: Asia/Shanghai
+    networks: [tycoon_net]
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8788 || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 240s
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 10s, max_attempts: 0 }
+      resources: { limits: { memory: 560M } }
+
+  # ==================== 管理后台（Dubbo 提供者 + 消费者）====================
+  admin:
+    image: 127.0.0.1:5000/tycoon-admin:1.0.0
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: tycoon
+      DB_USER: tycoon
+      DB_PASSWORD: tycoon123
+      NACOS_ADDR: nacos:8848
+      # 必须与 gateway 的 JWT_SECRET 完全一致
+      JWT_SECRET: tycoon-admin-jwt-secret-please-change-in-production-0123456789
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin123
+      SW_AGENT_ENABLED: "true"
+      DUBBO_APPLICATION_REGISTERMODE: "application"
+      DUBBO_APPLICATION_REGISTER_MODE: "application"
+      SW_AGENT_NAME: tycoon-admin
+      SW_AGENT_COLLECTOR: skywalking-oap:11800
+      TZ: Asia/Shanghai
+    networks: [tycoon_net]
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8789 || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 240s
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 10s, max_attempts: 0 }
+      resources: { limits: { memory: 560M } }
+
+  gateway:
+    image: 127.0.0.1:5000/tycoon-gateway:1.0.0
+    environment:
+      NACOS_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_DISCOVERY_FAIL_FAST: "false"
+      SW_AGENT_ENABLED: "true"
+      DUBBO_APPLICATION_REGISTERMODE: "application"
+      DUBBO_APPLICATION_REGISTER_MODE: "application"
+      SW_AGENT_NAME: tycoon-gateway
+      SW_AGENT_COLLECTOR: skywalking-oap:11800
+      # 必须与 admin-service 的 JWT_SECRET 完全一致
+      JWT_SECRET: tycoon-admin-jwt-secret-please-change-in-production-0123456789
+      TZ: Asia/Shanghai
+    networks: [tycoon_net]
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8080 || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 240s
+    deploy:
+      # 两级负载均衡的上一层：2 个网关实例
+      replicas: 2
+      # 用默认的 vip 模式：
+      #   nginx 解析到服务 VIP → kube-proxy/IPVS 把流量分发到 2 个网关任务
+      #   任务增减时 IPVS 自动摘除，nginx 不会缓存到已死实例的 IP
+      # （之前用 dnsrr + nginx 静态 upstream，重启后会解析出 3 个 IP 含已死任务）
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
+      restart_policy: { condition: any, delay: 10s, max_attempts: 0 }
+      resources: { limits: { memory: 512M } }
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8090:80"
+    volumes:
+      - /opt/tycoon-wheel/config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 0 }
+      resources: { limits: { memory: 64M } }
+
+# ==================== 监控 ====================
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=3d
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    volumes:
+      - /opt/tycoon-wheel/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 0 }
+      resources: { limits: { memory: 384M } }
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: ""
+      TZ: Asia/Shanghai
+    ports:
+      - "3000:3000"
+    volumes:
+      - /opt/tycoon-wheel/config/grafana/datasource.yml:/etc/grafana/provisioning/datasources/default.yml:ro
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 0 }
+      resources: { limits: { memory: 256M } }
+
+# ==================== 链路追踪 ====================
+  skywalking-oap:
+    image: apache/skywalking-oap-server:10.1.0
+    environment:
+      # 用 Elasticsearch 持久化，OAP 重启不再丢 trace
+      SW_STORAGE: elasticsearch
+      SW_STORAGE_ES_CLUSTER_NODES: elasticsearch:9200
+      # 索引前缀，便于和业务日志区分
+      SW_NAMESPACE: tycoon
+      SW_ES_USER: ""
+      SW_ES_PASSWORD: ""
+      # 堆要留足，否则 GraphQL 聚合查询会 GC 抖动到几十秒，UI 直接 503
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
+      TZ: Asia/Shanghai
+    ports:
+      # 和 nacos 同样的处理：gRPC 走 VIP 会握手失败，改 host 模式 + dnsrr
+      - target: 11800
+        published: 11800
+        mode: host
+      - target: 12800
+        published: 12800
+        mode: host
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      restart_policy: { condition: any, delay: 10s, max_attempts: 0 }
+      resources: { limits: { memory: 1536M } }
+
+  skywalking-ui:
+    image: apache/skywalking-ui:10.1.0
+    environment:
+      SW_OAP_ADDRESS: http://skywalking-oap:12800
+      TZ: Asia/Shanghai
+    ports:
+      - "8082:8080"
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 0 }
+      resources: { limits: { memory: 320M } }
+
+# ==================== 日志（ELK）====================
+  elasticsearch:
+    image: elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      ES_JAVA_OPTS: "-Xms448m -Xmx448m"
+      TZ: Asia/Shanghai
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 15s, max_attempts: 0 }
+      resources: { limits: { memory: 1024M } }
+
+  kibana:
+    image: kibana:8.15.3
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      XPACK_SECURITY_ENABLED: "false"
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: "tycoon0123456789tycoon0123456789"
+      SERVER_PUBLICBASEURL: http://localhost:5601
+      # Kibana 是 Node 应用，默认堆会撑爆容器限额导致 SIGABRT(134)
+      NODE_OPTIONS: "--max-old-space-size=384"
+      TZ: Asia/Shanghai
+    ports:
+      - "5601:5601"
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 20s, max_attempts: 0 }
+      resources: { limits: { memory: 560M } }
+
+  filebeat:
+    image: elastic/filebeat:8.15.3
+    user: root
+    # 不覆盖 command：用镜像默认 entrypoint，之前覆盖后进程无输出就退出
+    volumes:
+      - /opt/tycoon-wheel/config/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [tycoon_net]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 10s, max_attempts: 0 }
+      resources: { limits: { memory: 192M } }

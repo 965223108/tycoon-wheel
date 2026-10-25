@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>富豪大转盘 · 管理后台</title>
+<style>
+  :root{
+    --bg:#0f1116; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --gold:#d4af37; --gold2:#f0d98a; --text:#e8eaf0; --muted:#8b93a5;
+    --green:#3fb950; --red:#f85149; --blue:#58a6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}
+  a{color:var(--blue)}
+  .hidden{display:none!important}
+
+  /* 登录 */
+  #loginView{display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .login-card{width:360px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:32px}
+  .login-card h1{margin:0 0 4px;font-size:22px;color:var(--gold2);letter-spacing:2px}
+  .login-card p{margin:0 0 24px;color:var(--muted);font-size:12px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:9px 12px;font-size:13px;outline:none;font-family:inherit}
+  input:focus,select:focus{border-color:var(--gold)}
+  button{cursor:pointer;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-family:inherit}
+  .btn-primary{background:linear-gradient(135deg,var(--gold),#b8942c);color:#1a1400;font-weight:700;width:100%}
+  .btn-sm{padding:5px 10px;font-size:12px;background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .btn-sm:hover{border-color:var(--gold)}
+  .btn-danger{color:var(--red);border-color:#5b2b2b}
+  .btn-ok{color:var(--green)}
+  #loginMsg{margin-top:12px;font-size:12px;color:var(--red);min-height:18px}
+
+  /* 布局 */
+  #appView{display:flex;min-height:100vh}
+  aside{width:200px;background:var(--panel);border-right:1px solid var(--line);padding:20px 0;flex-shrink:0}
+  .brand{padding:0 20px 20px;font-size:16px;color:var(--gold2);font-weight:700;letter-spacing:1px}
+  .nav-item{padding:11px 20px;color:var(--muted);cursor:pointer;border-left:3px solid transparent;font-size:13px}
+  .nav-item:hover{background:var(--panel2);color:var(--text)}
+  .nav-item.active{color:var(--gold2);border-left-color:var(--gold);background:var(--panel2)}
+  main{flex:1;padding:24px 28px;overflow-x:auto}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .topbar h2{margin:0;font-size:18px}
+  .who{font-size:12px;color:var(--muted)}
+  .who b{color:var(--gold2)}
+
+  /* 卡片 / 表格 */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card .k{color:var(--muted);font-size:12px}
+  .card .v{font-size:26px;font-weight:700;color:var(--gold2);margin-top:6px}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:12px;overflow:hidden}
+  th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+  th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:12px}
+  tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px}
+  .tag-ok{background:#12351b;color:var(--green)}
+  .tag-bad{background:#3a1618;color:var(--red)}
+  .tag-gray{background:#242832;color:var(--muted)}
+  .toolbar{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+  .toolbar input{width:220px}
+  .panel-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:20px}
+  .panel-box h3{margin:0 0 14px;font-size:14px;color:var(--gold2)}
+  .grid-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
+  .empty{color:var(--muted);text-align:center;padding:26px;font-size:13px}
+  .toast{position:fixed;right:24px;bottom:24px;background:var(--panel2);border:1px solid var(--gold);
+    color:var(--gold2);padding:12px 18px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ==================== 登录 ==================== -->
+<div id="loginView">
+  <div class="login-card">
+    <h1>富豪大转盘</h1>
+    <p>ADMIN CONSOLE · 管理后台</p>
+    <div class="field">
+      <label>管理员账号</label>
+      <input id="loginUser" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input id="loginPass" type="password" placeholder="••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="btnLogin">登 录</button>
+    <div id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- ==================== 主界面 ==================== -->
+<div id="appView" class="hidden">
+  <aside>
+    <div class="brand">🛞 TYCOON ADMIN</div>
+    <div class="nav-item active" data-tab="overview">📊 概览</div>
+    <div class="nav-item" data-tab="users">👤 用户管理</div>
+    <div class="nav-item" data-tab="rewards">🎁 奖励管理</div>
+    <div class="nav-item" data-tab="segments">🎰 游戏商品</div>
+    <div class="nav-item" id="btnLogout" style="margin-top:24px;color:var(--red)">⎋ 退出登录</div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <h2 id="pageTitle">概览</h2>
+      <div class="who">当前管理员：<b id="whoName">-</b></div>
+    </div>
+
+    <!-- 概览 -->
+    <section id="tab-overview">
+      <div class="cards">
+        <div class="card"><div class="k">注册用户</div><div class="v" id="ovUsers">-</div></div>
+        <div class="card"><div class="k">商品总数</div><div class="v" id="ovSegments">-</div></div>
+        <div class="card"><div class="k">启用中商品</div><div class="v" id="ovEnabled">-</div></div>
+        <div class="card"><div class="k">概率合计</div><div class="v" id="ovPercent">-</div></div>
+      </div>
+      <div class="panel-box">
+        <h3>当前生效的转盘配置</h3>
+        <div id="ovSegmentTable"></div>
+      </div>
+    </section>
+
+    <!-- 用户管理 -->
+    <section id="tab-users" class="hidden">
+      <div class="toolbar">
+        <input id="userKeyword" placeholder="搜索用户名">
+        <button class="btn-sm" id="btnSearchUser">查询</button>
+        <button class="btn-sm" id="btnReloadUser">刷新</button>
+      </div>
+      <div id="userTable"></div>
+    </section>
+
+    <!-- 奖励管理 -->
+    <section id="tab-rewards" class="hidden">
+      <div class="panel-box">
+        <h3>手动发放奖励</h3>
+        <div class="grid-form">
+          <div><label class="k" style="color:var(--muted);font-size:12px">用户 ID</label>
+            <input id="grUserId" placeholder="如 1"></div>
+          <div><label class="k" style="color:var(--muted);font-size:12px">奖品 key</label>
+            <input id="grKey" placeholder="如 coupon8"></div>
+          <div><label class="k" style="color:var(--muted);font-size:12px">名称</label>
+            <input id="grLabel" placeholder="如 8 折券"></div>
+          <div><label class="k" style="color:var(--muted);font-size:12px">图标</label>
+            <input id="grIcon" placeholder="🏷️"></div>
+          <div><button class="btn-sm btn-ok" id="btnGrant">发放</button></div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input id="rewardUserId" placeholder="查看某用户的奖励，填 ID">
+        <button class="btn-sm" id="btnLoadRewards">查询</button>
+      </div>
+      <div id="rewardTable"></div>
+    </section>
+
+    <!-- 游戏商品 -->
+    <section id="tab-segments" class="hidden">
+      <div class="panel-box">
+        <h3>新增商品</h3>
+        <div class="grid-form">
+          <div><label style="color:var(--muted);font-size:12px">key</label><input id="sgKey" placeholder="如 watch"></div>
+          <div><label style="color:var(--muted);font-size:12px">名称</label><input id="sgLabel" placeholder="如 手表"></div>
+          <div><label style="color:var(--muted);font-size:12px">图标</label><input id="sgIcon" placeholder="⌚"></div>
+          <div><label style="color:var(--muted);font-size:12px">类型</label>
+            <select id="sgType">
+              <option value="prize">prize 实物</option>
+              <option value="points">points 积分</option>
+              <option value="coupon">coupon 优惠券</option>
+              <option value="none">none 谢谢参与</option>
+            </select></div>
+          <div><label style="color:var(--muted);font-size:12px">概率 %</label><input id="sgPercent" placeholder="5"></div>
+          <div><label style="color:var(--muted);font-size:12px">积分</label><input id="sgPoints" placeholder="0"></div>
+          <div><button class="btn-sm btn-ok" id="btnCreateSeg">新增</button></div>
+        </div>
+      </div>
+      <div id="segmentTable"></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const API = '';                 // 同源，网关会转发
+let TOKEN = localStorage.getItem('tycoon_admin_token') || '';
+
+function toast(msg, bad) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.borderColor = bad ? 'var(--red)' : 'var(--gold)';
+  t.style.color = bad ? 'var(--red)' : 'var(--gold2)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function api(path, opts = {}) {
+  const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+  const r = await fetch(API + path, Object.assign({}, opts, { headers }));
+  const text = await r.text();
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  if (r.status === 401) {
+    logout();
+    throw new Error('登录已过期，请重新登录');
+  }
+  if (!r.ok) throw new Error((body && body.message) || ('HTTP ' + r.status));
+  return body;
+}
+
+/* ---------------- 登录 ---------------- */
+$('#btnLogin').onclick = async () => {
+  const username = $('#loginUser').value.trim();
+  const password = $('#loginPass').value;
+  if (!username || !password) { $('#loginMsg').textContent = '请输入账号和密码'; return; }
+  $('#loginMsg').textContent = '';
+  try {
+    const r = await fetch(API + '/api/admin/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const body = await r.json();
+    if (!r.ok) { $('#loginMsg').textContent = body.message || '登录失败'; return; }
+    TOKEN = body.token;
+    localStorage.setItem('tycoon_admin_token', TOKEN);
+    localStorage.setItem('tycoon_admin_name', body.username);
+    enterApp();
+  } catch (e) {
+    $('#loginMsg').textContent = String(e.message || e);
+  }
+};
+
+function logout() {
+  TOKEN = '';
+  localStorage.removeItem('tycoon_admin_token');
+  localStorage.removeItem('tycoon_admin_name');
+  $('#appView').classList.add('hidden');
+  $('#loginView').classList.remove('hidden');
+}
+$('#btnLogout').onclick = logout;
+
+function enterApp() {
+  $('#loginView').classList.add('hidden');
+  $('#appView').classList.remove('hidden');
+  $('#whoName').textContent = localStorage.getItem('tycoon_admin_name') || '-';
+  showTab('overview');
+}
+
+/* ---------------- 标签切换 ---------------- */
+document.querySelectorAll('.nav-item[data-tab]').forEach(el => {
+  el.onclick = () => showTab(el.dataset.tab);
+});
+const TITLES = { overview: '概览', users: '用户管理', rewards: '奖励管理', segments: '游戏商品' };
+function showTab(name) {
+  document.querySelectorAll('.nav-item[data-tab]').forEach(e =>
+    e.classList.toggle('active', e.dataset.tab === name));
+  ['overview', 'users', 'rewards', 'segments'].forEach(t =>
+    $('#tab-' + t).classList.toggle('hidden', t !== name));
+  $('#pageTitle').textContent = TITLES[name];
+  if (name === 'overview') loadOverview();
+  if (name === 'users') loadUsers();
+  if (name === 'segments') loadSegments();
+}
+
+/* ---------------- 概览 ---------------- */
+async function loadOverview() {
+  try {
+    const o = await api('/api/admin/overview');
+    $('#ovUsers').textContent = o.userTotal;
+    $('#ovSegments').textContent = o.segmentTotal;
+    $('#ovEnabled').textContent = o.segmentEnabled;
+    const ps = await api('/api/admin/segments/percent-sum');
+    $('#ovPercent').textContent = ps.sum + '%';
+    $('#ovPercent').style.color = Math.abs(ps.sum - 100) < 0.01 ? 'var(--green)' : 'var(--red)';
+    const segs = await api('/api/admin/segments');
+    $('#ovSegmentTable').innerHTML = renderSegmentTable(segs, false);
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ---------------- 用户 ---------------- */
+async function loadUsers() {
+  try {
+    const kw = encodeURIComponent($('#userKeyword').value.trim());
+    const p = await api(`/api/admin/users?keyword=${kw}&page=1&size=50`);
+    if (!p.items || !p.items.length) { $('#userTable').innerHTML = '<div class="empty">暂无用户</div>'; return; }
+    $('#userTable').innerHTML = `<table>
+      <thead><tr><th>ID</th><th>账号</th><th>积分</th><th>抽奖次数</th><th>等级</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody>${p.items.map(u => `
+        <tr>
+          <td>${u.id}</td>
+          <td>${esc(u.username)}${u.nickname && u.nickname !== u.username ? `<span class="tag tag-gray" style="margin-left:6px">${esc(u.nickname)}</span>` : ''}</td>
+          <td><b style="color:var(--gold2)">${u.points}</b></td>
+          <td>${u.totalSpins}</td>
+          <td>${esc(u.tier || '-')}</td>
+          <td>${u.status === 'BLACKLISTED'
+            ? `<span class="tag tag-bad" title="${esc(u.blacklistReason || '')}">已拉黑</span>`
+            : '<span class="tag tag-ok">正常</span>'}</td>
+          <td>
+            <button class="btn-sm" onclick="addPoints(${u.id})">调分</button>
+            <button class="btn-sm" onclick="viewRewards(${u.id})">奖励</button>
+            ${u.status === 'BLACKLISTED'
+              ? `<button class="btn-sm btn-ok" onclick="unblacklist(${u.id})">解禁</button>`
+              : `<button class="btn-sm btn-danger" onclick="blacklist(${u.id})">拉黑</button>`}
+          </td>
+        </tr>`).join('')}</tbody></table>
+      <div class="empty">共 ${p.total} 个用户</div>`;
+  } catch (e) { toast(e.message, true); }
+}
+
+async function addPoints(id) {
+  const v = prompt('输入积分变动（正数发放，负数扣回）：', '50');
+  if (v === null) return;
+  const delta = parseInt(v, 10);
+  if (isNaN(delta)) { toast('请输入数字', true); return; }
+  try {
+    const r = await api(`/api/admin/users/${id}/points`, { method: 'POST', body: JSON.stringify({ delta }) });
+    toast(`用户 ${id} 最新积分：${r.points}`);
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function blacklist(id) {
+  const reason = prompt('拉黑原因：', '违规操作');
+  if (reason === null) return;
+  try {
+    await api(`/api/admin/users/${id}/blacklist`, { method: 'POST', body: JSON.stringify({ reason }) });
+    toast(`用户 ${id} 已拉黑`);
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function unblacklist(id) {
+  try {
+    await api(`/api/admin/users/${id}/unblacklist`, { method: 'POST' });
+    toast(`用户 ${id} 已解禁`);
+    loadUsers();
+  } catch (e) { toast(e.message, true); }
+}
+
+function viewRewards(id) {
+  showTab('rewards');
+  $('#rewardUserId').value = id;
+  loadRewards();
+}
+
+/* ---------------- 奖励 ---------------- */
+async function loadRewards() {
+  const id = $('#rewardUserId').value.trim();
+  if (!id) { $('#rewardTable').innerHTML = '<div class="empty">请输入用户 ID</div>'; return; }
+  try {
+    const p = await api(`/api/admin/users/${id}/rewards?page=1&size=50`);
+    if (!p.items || !p.items.length) { $('#rewardTable').innerHTML = '<div class="empty">该用户暂无奖励记录</div>'; return; }
+    $('#rewardTable').innerHTML = `<table>
+      <thead><tr><th>ID</th><th>奖品</th><th>key</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+      <tbody>${p.items.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${esc(r.icon || '')} ${esc(r.label)}</td>
+          <td>${esc(r.prizeKey)}</td>
+          <td>${statusTag(r.status)}</td>
+          <td>${r.createdAt ? new Date(r.createdAt).toLocaleString('zh-CN') : '-'}</td>
+          <td>
+            <button class="btn-sm btn-ok" onclick="setRewardStatus(${r.id},'ISSUED')">已发放</button>
+            <button class="btn-sm btn-danger" onclick="setRewardStatus(${r.id},'CANCELLED')">取消</button>
+          </td>
+        </tr>`).join('')}</tbody></table>
+      <div class="empty">共 ${p.total} 条奖励</div>`;
+  } catch (e) { toast(e.message, true); }
+}
+
+function statusTag(s) {
+  if (s === 'ISSUED') return '<span class="tag tag-ok">已发放</span>';
+  if (s === 'CANCELLED') return '<span class="tag tag-bad">已取消</span>';
+  return '<span class="tag tag-gray">待发放</span>';
+}
+
+async function setRewardStatus(id, status) {
+  try {
+    await api(`/api/admin/rewards/${id}/status`, {
+      method: 'POST', body: JSON.stringify({ status, remark: '后台操作' })
+    });
+    toast('状态已更新');
+    loadRewards();
+  } catch (e) { toast(e.message, true); }
+}
+
+$('#btnGrant').onclick = async () => {
+  const userId = parseInt($('#grUserId').value, 10);
+  const prizeKey = $('#grKey').value.trim();
+  const label = $('#grLabel').value.trim();
+  const icon = $('#grIcon').value.trim() || '🎁';
+  if (!userId || !prizeKey || !label) { toast('用户 ID / key / 名称 必填', true); return; }
+  try {
+    const r = await api('/api/admin/rewards', {
+      method: 'POST', body: JSON.stringify({ userId, prizeKey, label, icon })
+    });
+    toast(`已发放，奖励 ID ${r.rewardId}`);
+    $('#rewardUserId').value = userId;
+    loadRewards();
+  } catch (e) { toast(e.message, true); }
+};
+$('#btnLoadRewards').onclick = loadRewards;
+
+/* ---------------- 游戏商品 ---------------- */
+async function loadSegments() {
+  try {
+    const segs = await api('/api/admin/segments');
+    $('#segmentTable').innerHTML = renderSegmentTable(segs, true);
+  } catch (e) { toast(e.message, true); }
+}
+
+function renderSegmentTable(segs, withActions) {
+  if (!segs || !segs.length) return '<div class="empty">暂无商品配置</div>';
+  const rows = segs.map(s => `
+    <tr>
+      <td>${s.idx}</td>
+      <td>${esc(s.icon || '')} ${esc(s.label)}</td>
+      <td><code style="color:var(--muted)">${esc(s.key)}</code></td>
+      <td>${esc(s.type)}</td>
+      <td><b style="color:var(--gold2)">${s.percent}%</b></td>
+      <td>${s.points || 0}</td>
+      <td>${s.enabled ? '<span class="tag tag-ok">启用</span>' : '<span class="tag tag-gray">停用</span>'}</td>
+      ${withActions ? `<td>
+        <button class="btn-sm" onclick="editSegment(${s.id})">编辑</button>
+        <button class="btn-sm" onclick="toggleSegment(${s.id})">${s.enabled ? '停用' : '启用'}</button>
+        <button class="btn-sm btn-danger" onclick="deleteSegment(${s.id})">删除</button>
+      </td>` : ''}
+    </tr>`).join('');
+  return `<table>
+    <thead><tr><th>顺序</th><th>名称</th><th>key</th><th>类型</th><th>概率</th><th>积分</th><th>状态</th>
+    ${withActions ? '<th>操作</th>' : ''}</tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+$('#btnCreateSeg').onclick = async () => {
+  const body = {
+    segKey: $('#sgKey').value.trim(),
+    label: $('#sgLabel').value.trim(),
+    icon: $('#sgIcon').value.trim() || '🎁',
+    type: $('#sgType').value,
+    percent: parseFloat($('#sgPercent').value),
+    points: parseInt($('#sgPoints').value || '0', 10),
+    enabled: true
+  };
+  if (!body.segKey || !body.label || isNaN(body.percent)) { toast('key / 名称 / 概率 必填', true); return; }
+  try {
+    await api('/api/admin/segments', { method: 'POST', body: JSON.stringify(body) });
+    toast('新增成功');
+    ['#sgKey', '#sgLabel', '#sgIcon', '#sgPercent', '#sgPoints'].forEach(s => $(s).value = '');
+    loadSegments();
+  } catch (e) { toast(e.message, true); }
+};
+
+async function editSegment(id) {
+  const segs = await api('/api/admin/segments');
+  const s = segs.find(x => x.id === id);
+  if (!s) return;
+  const label = prompt('名称：', s.label); if (label === null) return;
+  const percent = prompt('概率 %：', s.percent); if (percent === null) return;
+  const points = prompt('积分（type=points 时有效）：', s.points || 0); if (points === null) return;
+  try {
+    await api(`/api/admin/segments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(Object.assign({}, s, {
+        label, percent: parseFloat(percent), points: parseInt(points, 10) || 0
+      }))
+    });
+    toast('已保存');
+    loadSegments();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function toggleSegment(id) {
+  try { await api(`/api/admin/segments/${id}/toggle`, { method: 'POST' }); loadSegments(); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function deleteSegment(id) {
+  if (!confirm('确定删除该商品？')) return;
+  try { await api(`/api/admin/segments/${id}`, { method: 'DELETE' }); toast('已删除'); loadSegments(); }
+  catch (e) { toast(e.message, true); }
+}
+
+$('#btnSearchUser').onclick = loadUsers;
+$('#btnReloadUser').onclick = loadUsers;
+$('#userKeyword').addEventListener('keydown', e => { if (e.key === 'Enter') loadUsers(); });
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ---------------- 启动 ---------------- */
+(async () => {
+  if (TOKEN) {
+    try { await api('/api/admin/auth/me'); enterApp(); }
+    catch { logout(); }
+  }
+})();
+</script>
+</body>
+</html>

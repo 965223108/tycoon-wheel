@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tycoon.user.mapper.RewardMapper">
+
+    <resultMap id="rewardMap" type="com.tycoon.user.domain.UserReward">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="prize_key" property="prizeKey"/>
+        <result column="label" property="label"/>
+        <result column="icon" property="icon"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="cols">id, user_id, prize_key, label, icon, status, remark, created_at</sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_rewards (user_id, prize_key, label, icon, status, remark, created_at)
+        VALUES (#{userId}, #{prizeKey}, #{label}, #{icon}, #{status}, #{remark}, #{createdAt})
+    </insert>
+
+    <select id="findById" resultMap="rewardMap">
+        SELECT <include refid="cols"/> FROM user_rewards WHERE id = #{id}
+    </select>
+
+    <select id="listByUser" resultMap="rewardMap">
+        SELECT <include refid="cols"/> FROM user_rewards
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByUser" resultType="long">
+        SELECT COUNT(*) FROM user_rewards WHERE user_id = #{userId}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE user_rewards
+        SET status = #{status}
+        <if test="remark != null">, remark = #{remark}</if>
+        WHERE id = #{id}
+    </update>
+
+</mapper>

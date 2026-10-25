@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tycoon.user.mapper.UserMapper">
+
+    <resultMap id="userMap" type="com.tycoon.user.domain.User">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="salt" property="salt"/>
+        <result column="password_hash" property="passwordHash"/>
+        <result column="points" property="points"/>
+        <result column="total_spins" property="totalSpins"/>
+        <result column="day_key" property="dayKey"/>
+        <result column="day_count" property="dayCount"/>
+        <result column="version" property="version"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="cols">
+        id, username, salt, password_hash, points, total_spins, day_key, day_count, version, created_at
+    </sql>
+
+    <select id="findById" resultMap="userMap">
+        SELECT <include refid="cols"/> FROM users WHERE id = #{id}
+    </select>
+
+    <select id="findByUsername" resultMap="userMap">
+        SELECT <include refid="cols"/> FROM users WHERE username = #{username} LIMIT 1
+    </select>
+
+    <select id="countByUsername" resultType="long">
+        SELECT COUNT(*) FROM users WHERE username = #{username}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (username, salt, password_hash, points, total_spins,
+                           day_key, day_count, version, created_at)
+        VALUES (#{username}, #{salt}, #{passwordHash}, #{points}, #{totalSpins},
+                #{dayKey}, #{dayCount}, #{version}, #{createdAt})
+    </insert>
+
+    <update id="deductPoints">
+        UPDATE users
+        SET points      = points - #{cost},
+            total_spins = total_spins + 1,
+            day_count   = CASE WHEN day_key = #{dayKey} THEN day_count + 1 ELSE 1 END,
+            day_key     = #{dayKey},
+            version     = version + 1
+        WHERE id = #{id} AND points &gt;= #{cost}
+    </update>
+
+    <update id="addPoints">
+        UPDATE users
+        SET points  = GREATEST(points + #{delta}, 0),
+            version = version + 1
+        WHERE id = #{id}
+    </update>
+
+    <select id="list" resultMap="userMap">
+        SELECT <include refid="cols"/> FROM users
+        <where>
+            <if test="keyword != null and keyword != ''">
+                username LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM users
+        <where>
+            <if test="keyword != null and keyword != ''">
+                username LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+    </select>
+
+</mapper>

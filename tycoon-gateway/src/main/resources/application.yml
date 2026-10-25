@@ -1,0 +1,21 @@
+# ============================================================
+# 本地只保留「引导配置」；业务配置见 Nacos: tycoon-gateway.yaml
+# （路由、JWT 密钥、重试策略、日志级别都在配置中心）
+# ============================================================
+spring:
+  application:
+    name: tycoon-gateway
+
+  config:
+    import:
+      - optional:nacos:tycoon-gateway.yaml?group=DEFAULT_GROUP&refreshEnabled=true
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+        refresh-enabled: true
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.tycoon.mapper.UserMapper">
+
+    <resultMap id="userMap" type="com.tycoon.domain.User">
+        <id     property="id"           column="id"/>
+        <result property="username"     column="username"/>
+        <result property="salt"         column="salt"/>
+        <result property="passwordHash" column="password_hash"/>
+        <result property="points"       column="points"/>
+        <result property="totalSpins"   column="total_spins"/>
+        <result property="dayKey"       column="day_key"/>
+        <result property="dayCount"     column="day_count"/>
+        <result property="version"      column="version"/>
+        <result property="createdAt"    column="created_at"/>
+    </resultMap>
+
+    <sql id="allColumns">
+        id, username, salt, password_hash, points, total_spins,
+        day_key, day_count, version, created_at
+    </sql>
+
+    <select id="findByUsername" resultMap="userMap">
+        SELECT <include refid="allColumns"/>
+        FROM users
+        WHERE username = #{username}
+    </select>
+
+    <select id="findById" resultMap="userMap">
+        SELECT <include refid="allColumns"/>
+        FROM users
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users
+            (username, salt, password_hash, points, total_spins,
+             day_key, day_count, version, created_at)
+        VALUES
+            (#{username}, #{salt}, #{passwordHash}, #{points}, #{totalSpins},
+             #{dayKey}, #{dayCount}, 0, #{createdAt})
+    </insert>
+
+    <!-- 乐观锁：version 对不上就更新 0 行，由上层抛冲突 -->
+    <update id="updateWithVersion">
+        UPDATE users
+        SET points       = #{points},
+            total_spins  = #{totalSpins},
+            day_key      = #{dayKey},
+            day_count    = #{dayCount},
+            version      = version + 1
+        WHERE id      = #{id}
+          AND version = #{version}
+    </update>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM users
+    </select>
+
+</mapper>

@@ -1,0 +1,22 @@
+# ============================================================
+# 本地只保留「引导配置」：告诉服务去哪里找配置中心 + 自己叫什么名字
+# 业务配置（数据源 / Dubbo / 游戏规则 / 日志级别 …）
+# 全部在 Nacos 配置中心，data-id = tycoon-user.yaml
+# ============================================================
+spring:
+  application:
+    name: tycoon-user
+
+  config:
+    import:
+      - optional:nacos:tycoon-user.yaml?group=DEFAULT_GROUP&refreshEnabled=true
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+        refresh-enabled: true
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}

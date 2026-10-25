@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>富豪大转盘 · Tycoon Wheel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%237a1220' stroke='%23e8c25a' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='12' fill='%23e8c25a'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --gold:#e8c25a;
+    --gold-2:#f8e7ae;
+    --gold-dim:#c9a24a;
+    --crimson:#7a1220;
+    --deep:#1a0a0f;
+    --ink:#08070b;
+    --cream:#f5eddc;
+    --line:rgba(232,194,90,.28);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:"HarmonyOS Sans SC","MiSans","PingFang SC","Microsoft YaHei UI","Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
+    font-variant-numeric:tabular-nums;
+    font-feature-settings:"tnum" 1,"lnum" 1;
+    color:var(--cream);
+    background:var(--ink);
+    overflow-x:hidden;
+  }
+  /* ---------- 背景 ---------- */
+  .bg{
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, rgba(232,194,90,.16), transparent 60%),
+      radial-gradient(900px 600px at 85% 110%, rgba(122,18,32,.35), transparent 60%),
+      radial-gradient(700px 500px at 10% 90%, rgba(232,194,90,.08), transparent 60%),
+      linear-gradient(160deg,#0b0509 0%,#150810 45%,#0a0508 100%);
+  }
+  .bg::after{
+    content:"";position:absolute;inset:0;
+    background-image:radial-gradient(rgba(232,194,90,.10) 1px, transparent 1px);
+    background-size:34px 34px;
+    mask-image:radial-gradient(circle at 50% 35%, #000 0%, transparent 72%);
+    -webkit-mask-image:radial-gradient(circle at 50% 35%, #000 0%, transparent 72%);
+  }
+  .view{position:relative;z-index:1}
+  .hidden{display:none !important}
+
+  /* ---------- 通用卡片 ---------- */
+  .card{
+    background:linear-gradient(180deg,rgba(38,20,26,.92),rgba(20,10,15,.94));
+    border:1px solid var(--line);
+    border-radius:22px;
+    box-shadow:
+      0 30px 70px -30px rgba(0,0,0,.9),
+      inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter:blur(14px);
+  }
+
+  /* ---------- 登录 ---------- */
+  #loginView{
+    min-height:100dvh;
+    display:grid;place-items:center;
+    padding:24px;
+  }
+  .login-card{
+    width:min(420px,100%);
+    padding:38px 32px 30px;
+    text-align:center;
+  }
+  .brand-mark{
+    font-size:44px;line-height:1;margin-bottom:10px;
+    filter:drop-shadow(0 8px 22px rgba(232,194,90,.42));
+  }
+  .brand-title{
+    margin:0;
+    font-size:26px;letter-spacing:.22em;font-weight:800;
+    background:linear-gradient(180deg,#fff5d6,var(--gold) 55%,var(--gold-dim));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand-sub{
+    margin:10px 0 28px;
+    font-size:12px;letter-spacing:.34em;color:rgba(245,237,220,.58);
+    text-transform:uppercase;
+  }
+  .field{margin-bottom:14px;text-align:left}
+  .field label{
+    display:block;font-size:11px;letter-spacing:.16em;
+    color:rgba(245,237,220,.6);margin:0 0 7px 4px;
+  }
+  .field input{
+    width:100%;padding:14px 16px;
+    font-size:15px;color:var(--cream);
+    background:rgba(0,0,0,.42);
+    border:1px solid rgba(232,194,90,.2);
+    border-radius:13px;outline:none;
+    transition:border-color .2s,box-shadow .2s,background .2s;
+  }
+  .field input::placeholder{color:rgba(245,237,220,.46)}
+  .field input:focus{
+    border-color:rgba(232,194,90,.66);
+    box-shadow:0 0 0 4px rgba(232,194,90,.10);
+    background:rgba(0,0,0,.55);
+  }
+  .btn{
+    width:100%;padding:15px 18px;margin-top:8px;
+    font-size:15px;font-weight:700;letter-spacing:.1em;
+    color:#2a1c05;cursor:pointer;
+    background:linear-gradient(180deg,var(--gold-2),var(--gold) 48%,#c8a03f);
+    border:none;border-radius:13px;
+    box-shadow:0 12px 28px -12px rgba(232,194,90,.8),inset 0 1px 0 rgba(255,255,255,.6);
+    transition:transform .12s,box-shadow .2s,filter .2s;
+  }
+  .btn:hover{filter:brightness(1.06)}
+  .btn:active{transform:translateY(1px) scale(.995)}
+  .btn:disabled{cursor:not-allowed;filter:grayscale(.55) brightness(.75);box-shadow:none}
+  .btn-ghost{
+    background:transparent;color:var(--gold);
+    border:1px solid rgba(232,194,90,.38);
+    box-shadow:none;font-weight:600;
+    letter-spacing:.08em;font-size:13px;padding:12px;
+  }
+  .btn-ghost:hover{background:rgba(232,194,90,.08)}
+  .switch-line{
+    margin-top:20px;font-size:12.5px;color:rgba(245,237,220,.6);
+  }
+  .switch-line b{
+    color:var(--gold);cursor:pointer;
+    border-bottom:1px dashed rgba(232,194,90,.5);padding-bottom:1px;
+  }
+  .msg{
+    margin-top:14px;min-height:18px;font-size:12.5px;
+    color:#ff8f8f;letter-spacing:.02em;
+  }
+  .msg.ok{color:#8fe3a8}
+  .foot-note{
+    margin-top:22px;font-size:11px;line-height:1.85;
+    color:rgba(245,237,220,.56);
+  }
+
+  /* ---------- 游戏主界面 ---------- */
+  #gameView{min-height:100dvh;padding:18px;display:flex;flex-direction:column}
+  /* 用 auto 外边距做垂直居中：内容超高时会自动退化为顶部对齐，不会被裁掉 */
+  #gameView > .topbar{width:100%;margin-top:auto}
+  #gameView > .layout{width:100%;margin-bottom:auto}
+  .topbar{
+    max-width:1120px;margin:0 auto 18px;
+    display:flex;align-items:center;gap:14px;
+    padding:13px 18px;border-radius:16px;
+    background:linear-gradient(180deg,rgba(38,20,26,.8),rgba(20,10,15,.85));
+    border:1px solid var(--line);
+    backdrop-filter:blur(12px);
+  }
+  .logo{
+    font-size:15px;font-weight:800;letter-spacing:.16em;white-space:nowrap;
+    background:linear-gradient(180deg,#fff5d6,var(--gold) 60%,var(--gold-dim));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .logo span{letter-spacing:.04em;font-size:11px;opacity:.8}
+  .spacer{flex:1}
+  .chip{
+    display:flex;align-items:center;gap:9px;
+    padding:8px 14px;border-radius:11px;
+    background:rgba(232,194,90,.08);
+    border:1px solid rgba(232,194,90,.24);
+    font-size:12px;white-space:nowrap;
+  }
+  .chip .k{color:rgba(245,237,220,.62);letter-spacing:.06em}
+  .chip .v{
+    font-size:16px;font-weight:800;color:var(--gold-2);
+    font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  }
+  .user-tag{
+    font-size:12.5px;color:rgba(245,237,220,.8);
+    max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .link-btn{
+    background:none;border:none;color:rgba(245,237,220,.6);
+    font-size:12px;cursor:pointer;padding:6px 2px;letter-spacing:.06em;
+  }
+  .link-btn:hover{color:var(--gold)}
+
+  .layout{
+    max-width:1120px;margin:0 auto;
+    display:grid;grid-template-columns:minmax(0,1fr) 340px;
+    gap:22px;align-items:start;
+  }
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    #gameView{padding:12px}
+    .topbar{flex-wrap:wrap;gap:10px;padding:12px 14px}
+    .logo{order:1}.spacer{order:2;flex:1 1 40px}
+    .chip{order:3}
+    .user-tag{order:4}
+    .link-btn{order:5}
+  }
+
+  /* ---------- 转盘 ---------- */
+  .stage{padding:30px 24px 26px;text-align:center;border-radius:24px;
+    background:linear-gradient(180deg,rgba(38,20,26,.55),rgba(16,8,13,.75));
+    border:1px solid var(--line);
+    box-shadow:0 30px 70px -40px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .wheel-wrap{
+    position:relative;width:min(440px,86vw);aspect-ratio:1;
+    margin:6px auto 0;
+  }
+  .wheel-glow{
+    position:absolute;inset:-9%;border-radius:50%;
+    background:radial-gradient(circle,rgba(232,194,90,.18),transparent 62%);
+    filter:blur(16px);
+  }
+  .rim{
+    position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg,#8a6a22,#f6e3a8,#c39a37,#fff0bf,#8a6a22,#e8c25a,#8a6a22);
+    padding:11px;
+    box-shadow:
+      0 0 0 2px rgba(0,0,0,.55),
+      0 26px 60px -22px rgba(0,0,0,.95),
+      inset 0 0 26px rgba(0,0,0,.5);
+  }
+  #wheel{
+    display:block;width:100%;height:100%;border-radius:50%;
+    background:#140a0e;
+    transition:transform 5.4s cubic-bezier(.16,.86,.10,1);
+    will-change:transform;
+  }
+  /* 扇区文字：始终反向自转，保证任何停角下都是水平的 */
+  .seg-lbl{
+    transform-box:fill-box;transform-origin:center;
+    transition:transform 5.4s cubic-bezier(.16,.86,.10,1);
+    will-change:transform;
+  }
+  .studs{position:absolute;inset:0;pointer-events:none}
+  .studs i{
+    position:absolute;width:9px;height:9px;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%,#fff8dc,#d8b559 55%,#8a6a22);
+    box-shadow:0 0 9px rgba(248,231,174,.85);
+    transform:translate(-50%,-50%);
+  }
+  .pointer{
+    position:absolute;left:50%;top:-6px;transform:translate(-50%,-40%);
+    width:44px;height:58px;z-index:6;
+    filter:drop-shadow(0 8px 14px rgba(0,0,0,.75));
+  }
+  .hub{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:26%;aspect-ratio:1;z-index:5;
+  }
+  #spinBtn{
+    width:100%;height:100%;border-radius:50%;cursor:pointer;
+    border:2px solid rgba(255,241,196,.85);
+    background:
+      radial-gradient(circle at 34% 28%,#fff6d8,#efcd74 40%,#b98d2e 72%,#7d5c1b);
+    color:#3a2705;
+    box-shadow:
+      0 10px 26px -8px rgba(0,0,0,.85),
+      inset 0 2px 6px rgba(255,255,255,.65),
+      inset 0 -6px 14px rgba(0,0,0,.28);
+    transition:transform .14s,filter .2s;
+    /* 用 flex 纵向居中：两行紧贴成一组，不再被拉伸到圆的两端 */
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;
+    padding:0;
+  }
+  /* padding-left 精确抵消 letter-spacing 的尾随空白，让墨迹真正居中 */
+  #spinBtn .btn-main{
+    font-size:clamp(14px,3.6vw,19px);font-weight:900;
+    letter-spacing:.16em;padding-left:.16em;
+    line-height:1;
+  }
+  #spinBtn small{
+    font-size:9.5px;font-weight:700;line-height:1;
+    letter-spacing:.08em;padding-left:.08em;
+    opacity:.76;
+  }
+  #spinBtn:hover:not(:disabled){filter:brightness(1.07)}
+  #spinBtn:active:not(:disabled){transform:scale(.96)}
+  #spinBtn:disabled{cursor:not-allowed;filter:grayscale(.5) brightness(.72)}
+  .stage-hint{
+    margin:22px 0 0;font-size:13px;color:rgba(245,237,220,.64);letter-spacing:.04em;
+  }
+  .stage-hint b{color:var(--gold-2);font-weight:700}
+  .stage-hint .warn{color:#ffb3b3}
+
+  /* ---------- 右侧面板 ---------- */
+  .panel{display:flex;flex-direction:column;gap:16px}
+  .panel-card{padding:20px 20px 18px;border-radius:20px}
+  .panel-title{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:11.5px;letter-spacing:.2em;color:rgba(245,237,220,.6);
+    margin:0 0 14px;
+  }
+  .balance{
+    display:flex;align-items:baseline;gap:8px;margin-bottom:4px;
+  }
+  .balance .num{
+    font-size:44px;font-weight:800;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,#fff8e0,var(--gold) 58%,#b58c30);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    line-height:1;
+  }
+  .balance .unit{font-size:13px;color:rgba(245,237,220,.6);letter-spacing:.1em}
+  .balance-bar{
+    height:6px;border-radius:99px;
+    background:rgba(255,255,255,.11);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.55);
+    overflow:hidden;margin:16px 0 12px;
+  }
+  .balance-bar i{
+    display:block;height:100%;border-radius:99px;
+    background:linear-gradient(90deg,#b98d2e,var(--gold-2));
+    box-shadow:0 0 8px rgba(232,194,90,.5);
+    transition:width .5s ease;
+  }
+  .balance-meta{font-size:11.5px;color:rgba(245,237,220,.6)}
+  .balance-meta b{color:rgba(245,237,220,.9);font-weight:700}
+
+  .hist-list{list-style:none;margin:0;padding:0 6px 0 0;max-height:290px;overflow-y:auto;scrollbar-gutter:stable}
+  .hist-list::-webkit-scrollbar{width:6px}
+  .hist-list::-webkit-scrollbar-track{background:transparent}
+  .hist-list::-webkit-scrollbar-thumb{
+    background:rgba(232,194,90,.32);border-radius:99px;
+    border:2px solid transparent;background-clip:padding-box;
+  }
+  .hist-list::-webkit-scrollbar-thumb:hover{background:rgba(232,194,90,.55);background-clip:padding-box}
+  .hist-item{
+    display:flex;align-items:center;gap:11px;
+    padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);
+    font-size:13px;
+  }
+  .hist-item:last-child{border-bottom:none}
+  .hist-ico{font-size:17px;width:22px;text-align:center;flex:none}
+  .hist-body{flex:1;min-width:0}
+  .hist-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hist-time{font-size:10.5px;color:rgba(245,237,220,.52);margin-top:2px}
+  .hist-tag{
+    font-size:10.5px;padding:3px 8px;border-radius:6px;flex:none;
+    letter-spacing:.04em;
+  }
+  .t-prize{background:rgba(232,194,90,.16);color:var(--gold-2);border:1px solid rgba(232,194,90,.3)}
+  .t-points{background:rgba(94,214,143,.12);color:#8fe3a8;border:1px solid rgba(94,214,143,.28)}
+  .t-coupon{background:rgba(120,170,255,.12);color:#9dc0ff;border:1px solid rgba(120,170,255,.26)}
+  .t-none{background:rgba(255,255,255,.06);color:rgba(245,237,220,.62);border:1px solid rgba(255,255,255,.12)}
+  .empty{
+    text-align:center;padding:26px 6px;
+    font-size:12.5px;color:rgba(245,237,220,.56);line-height:1.9;
+  }
+
+  .odds{margin-top:2px}
+  .odds summary{
+    cursor:pointer;list-style:none;font-size:11.5px;letter-spacing:.14em;
+    color:rgba(245,237,220,.6);padding:8px 0;
+  }
+  .odds summary::-webkit-details-marker{display:none}
+  .odds summary:hover{color:var(--gold)}
+  .odds-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
+  .odds-table td{padding:6px 2px;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .odds-table td:last-child{text-align:right;color:var(--gold-2);font-variant-numeric:tabular-nums}
+  .odds-note{font-size:10.5px;color:rgba(245,237,220,.54);line-height:1.85;margin-top:8px}
+
+  /* ---------- 结果弹窗 ---------- */
+  .modal{
+    position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:22px;
+    background:rgba(6,3,6,.78);backdrop-filter:blur(9px);
+    animation:fade .28s ease;
+  }
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal-card{
+    width:min(390px,100%);padding:38px 30px 28px;text-align:center;border-radius:26px;
+    background:linear-gradient(180deg,rgba(52,28,34,.98),rgba(22,11,16,.99));
+    border:1px solid rgba(232,194,90,.42);
+    box-shadow:0 40px 90px -30px #000,0 0 70px -20px rgba(232,194,90,.42);
+    animation:pop .42s cubic-bezier(.2,1.3,.4,1);
+  }
+  @keyframes pop{from{transform:scale(.82);opacity:0}to{transform:scale(1);opacity:1}}
+  .modal-ico{font-size:60px;line-height:1;margin-bottom:12px;filter:drop-shadow(0 10px 24px rgba(232,194,90,.4))}
+  .modal-kicker{font-size:11px;letter-spacing:.32em;color:rgba(245,237,220,.6);margin-bottom:10px}
+  .modal-title{
+    margin:0 0 8px;font-size:26px;font-weight:900;letter-spacing:.06em;
+    background:linear-gradient(180deg,#fff8e0,var(--gold) 62%,#b58c30);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .modal-desc{font-size:13.5px;color:rgba(245,237,220,.72);line-height:1.8;margin:0 0 22px}
+  .modal-desc .hl{color:var(--gold-2);font-weight:700}
+  .modal-actions{display:flex;gap:10px}
+  .modal-actions .btn{margin-top:0}
+
+  /* 中奖彩带 */
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
+  .confetti i{
+    position:absolute;top:-14px;width:9px;height:14px;border-radius:2px;
+    animation:fall linear forwards;
+  }
+  @keyframes fall{
+    to{transform:translateY(105vh) rotate(720deg);opacity:.15}
+  }
+  /* 数字跳动 */
+  .pulse{animation:pulse .5s ease}
+  @keyframes pulse{50%{transform:scale(1.1)}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<!-- ================= 登录 ================= -->
+<main id="loginView" class="view">
+  <div class="card login-card">
+    <div class="brand-mark">🎡</div>
+    <h1 class="brand-title">富豪大转盘</h1>
+    <p class="brand-sub">Tycoon Wheel</p>
+
+    <div class="field">
+      <label>账 号</label>
+      <input id="inputUser" type="text" placeholder="2–16 个字符" autocomplete="username" maxlength="16">
+    </div>
+    <div class="field">
+      <label>密 码</label>
+      <input id="inputPass" type="password" placeholder="至少 4 位" autocomplete="current-password" maxlength="32">
+    </div>
+
+    <button id="btnPrimary" class="btn">登 录</button>
+
+    <div id="loginMsg" class="msg"></div>
+
+    <p class="switch-line" id="switchLine">
+      还没有账号？<b id="toRegister">立即注册，送 100 积分</b>
+    </p>
+    <p class="foot-note">
+      账号与积分保存在服务端数据库，换设备登录同样有效；密码经加盐哈希后存储。
+    </p>
+  </div>
+</main>
+
+<!-- ================= 游戏 ================= -->
+<main id="gameView" class="view hidden">
+  <div class="topbar">
+    <div class="logo">富豪大转盘 <span>TYCOON</span></div>
+    <div class="spacer"></div>
+    <div class="chip">
+      <span class="k">积分</span>
+      <span class="v" id="topPoints">0</span>
+    </div>
+    <div class="user-tag" id="userTag">—</div>
+    <button class="link-btn" id="btnLogout">退出</button>
+  </div>
+
+  <div class="layout">
+    <!-- 转盘 -->
+    <section class="stage">
+      <div class="wheel-wrap">
+        <div class="wheel-glow"></div>
+        <div class="rim">
+          <svg id="wheel" viewBox="0 0 500 500" aria-label="大转盘"></svg>
+        </div>
+        <div class="studs" id="studs"></div>
+        <svg class="pointer" viewBox="0 0 44 58" aria-hidden="true">
+          <defs>
+            <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#fff6d8"/>
+              <stop offset=".55" stop-color="#e8c25a"/>
+              <stop offset="1" stop-color="#9b7524"/>
+            </linearGradient>
+          </defs>
+          <path d="M22 56 L3 16 A19 19 0 1 1 41 16 Z" fill="url(#pg)" stroke="#5a4413" stroke-width="1.6"/>
+          <circle cx="22" cy="17" r="6.4" fill="#6d4f14" opacity=".55"/>
+        </svg>
+        <div class="hub">
+          <button id="spinBtn"><span class="btn-main">开始</span><small id="spinSub">10 积分</small></button>
+        </div>
+      </div>
+      <p class="stage-hint" id="stageHint">每次抽奖消耗 <b>10</b> 积分</p>
+    </section>
+
+    <!-- 右侧 -->
+    <aside class="panel">
+      <div class="card panel-card">
+        <h2 class="panel-title"><span>我的积分</span><span id="tier">新人</span></h2>
+        <div class="balance">
+          <span class="num" id="bigPoints">0</span>
+          <span class="unit">分</span>
+        </div>
+        <div class="balance-bar"><i id="pointsBar" style="width:0%"></i></div>
+        <div class="balance-meta">
+          可抽 <b id="spinsLeft">0</b> 次 · 累计抽奖 <b id="totalSpins">0</b> 次
+        </div>
+      </div>
+
+      <div class="card panel-card">
+        <h2 class="panel-title"><span>中奖记录</span><span id="histCount"></span></h2>
+        <ul class="hist-list" id="histList"></ul>
+        <div class="empty" id="histEmpty">还没有记录<br>转一次试试手气</div>
+        <details class="odds">
+          <summary>奖品与概率</summary>
+          <table class="odds-table" id="oddsTable"></table>
+          <p class="odds-note">
+            概率为单次抽奖的独立概率。大奖数量有限，先到先得。
+          </p>
+        </details>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<!-- ================= 结果弹窗 ================= -->
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-ico" id="mIco">🎉</div>
+    <div class="modal-kicker" id="mKicker">恭 喜 中 奖</div>
+    <h3 class="modal-title" id="mTitle">手机</h3>
+    <p class="modal-desc" id="mDesc"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="mClose">知道了</button>
+      <button class="btn" id="mAgain">再来一次</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ======================= 状态 =======================
+     账号、积分、记录、盘面全部来自后端；本地不存任何业务数据。
+  ======================================================= */
+  let config = null;     // GET /api/config
+  let state = null;      // GET /api/me
+  let spinning = false;
+  let rotation = 0;
+  let spinToken = 0;
+  let mode = "login";
+
+  const el = id => document.getElementById(id);
+
+  /* ======================= HTTP ======================= */
+  async function api(method, path, body) {
+    const res = await fetch(path, {
+      method,
+      credentials: "same-origin",
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* 无响应体 */ }
+    if (!res.ok) {
+      const err = new Error((data && data.message) || ("请求失败（" + res.status + "）"));
+      err.status = res.status;
+      err.code = data && data.error;
+      throw err;
+    }
+    return data;
+  }
+
+  /* ======================= 绘制转盘 ======================= */
+  function polar(cx, cy, r, deg) {
+    const rad = (deg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  }
+
+  function buildWheel() {
+    const segments = config.segments;
+    const n = segments.length;
+    const segAngle = 360 / n;
+    const cx = 250, cy = 250, R = 244;
+    const svg = el("wheel");
+
+    let html = `<defs>
+      <radialGradient id="wg" cx="50%" cy="42%" r="62%">
+        <stop offset="0" stop-color="#ffffff" stop-opacity=".14"/>
+        <stop offset="1" stop-color="#000000" stop-opacity=".22"/>
+      </radialGradient>
+    </defs>`;
+
+    segments.forEach((seg, i) => {
+      const a0 = i * segAngle, a1 = (i + 1) * segAngle;
+      const [x0, y0] = polar(cx, cy, R, a0);
+      const [x1, y1] = polar(cx, cy, R, a1);
+      const even = i % 2 === 0;
+      const fill = even ? "#8f1b2b" : "#1b0b13";
+
+      html += `<path d="M ${cx} ${cy} L ${x0} ${y0} A ${R} ${R} 0 0 1 ${x1} ${y1} Z"
+                 fill="${fill}" stroke="rgba(232,194,90,.42)" stroke-width="1.6"/>`;
+      if (i > 0) {
+        html += `<line x1="${cx}" y1="${cy}" x2="${x0}" y2="${y0}"
+                   stroke="rgba(232,194,90,.55)" stroke-width="1.4"/>`;
+      }
+
+      // 标签：水平排布 + 反向自转，停在任何角度都正向可读
+      const mid = i * segAngle + segAngle / 2;
+      const [px, py] = polar(cx, cy, 152, mid);
+      html += `<g class="seg-lbl">
+        <text x="${px}" y="${py - 18}" text-anchor="middle"
+              font-size="26" dominant-baseline="middle">${seg.icon}</text>
+        <text x="${px}" y="${py + 16}" text-anchor="middle"
+              font-size="18" font-weight="700"
+              fill="${even ? "#fff2cd" : "#f6e0a6"}"
+              paint-order="stroke" stroke="rgba(0,0,0,.45)" stroke-width="2.6"
+              style="letter-spacing:.04em">${seg.label}</text>
+      </g>`;
+    });
+
+    html += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="url(#wg)" pointer-events="none"/>`;
+    html += `<circle cx="${cx}" cy="${cy}" r="70" fill="#120810"
+               stroke="rgba(232,194,90,.5)" stroke-width="2"/>`;
+
+    svg.innerHTML = html;
+
+    let sh = "";
+    for (let i = 0; i < 24; i++) {
+      const rad = (i * 15 - 90) * Math.PI / 180;
+      sh += `<i style="left:${50 + 49.2 * Math.cos(rad)}%;top:${50 + 49.2 * Math.sin(rad)}%"></i>`;
+    }
+    el("studs").innerHTML = sh;
+  }
+
+  function syncLabels(counter) {
+    const gs = document.querySelectorAll(".seg-lbl");
+    for (let i = 0; i < gs.length; i++) gs[i].style.transform = `rotate(${counter}deg)`;
+  }
+
+  /* ======================= 渲染 ======================= */
+  function renderAll() {
+    if (!state) return;
+    el("topPoints").textContent = state.points;
+    el("userTag").textContent = state.username;
+
+    const big = el("bigPoints");
+    big.textContent = state.points;
+    big.classList.remove("pulse");
+    void big.offsetWidth;
+    big.classList.add("pulse");
+
+    el("pointsBar").style.width =
+      state.points > 0 ? Math.max(3, Math.min(100, state.points / 5)) + "%" : "0%";
+
+    el("spinsLeft").textContent = state.spinsLeft;
+    el("totalSpins").textContent = state.totalSpins;
+    el("tier").textContent = state.tier;
+
+    renderHistory();
+    updateSpinBtn(spinning);
+  }
+
+  function renderHistory() {
+    const items = state.history || [];
+    el("histEmpty").classList.toggle("hidden", items.length > 0);
+    el("histCount").textContent = items.length ? items.length + " 条" : "";
+
+    const tagOf = t => t === "points" ? "t-points"
+      : t === "prize" ? "t-prize"
+      : t === "coupon" ? "t-coupon" : "t-none";
+
+    el("histList").innerHTML = items.map(h => {
+      const d = new Date(h.at);
+      const p = n => String(n).padStart(2, "0");
+      const time = `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      return `<li class="hist-item">
+        <span class="hist-ico">${h.icon}</span>
+        <span class="hist-body">
+          <span class="hist-name">${h.label}</span>
+          <span class="hist-time">${time}</span>
+        </span>
+        <span class="hist-tag ${tagOf(h.type)}">${h.pointsDelta > 0 ? "+" + h.pointsDelta : (h.pointsDelta < 0 ? h.pointsDelta : "—")}</span>
+      </li>`;
+    }).join("");
+  }
+
+  function renderOdds() {
+    el("oddsTable").innerHTML = config.segments.map(s => {
+      const p = s.percent;
+      const txt = Number.isInteger(p) ? p.toFixed(0) : p.toFixed(1);
+      return `<tr><td>${s.icon} ${s.label}</td><td>${txt}%</td></tr>`;
+    }).join("");
+  }
+
+  function updateSpinBtn(isSpin) {
+    const btn = el("spinBtn");
+    const main = btn.querySelector(".btn-main");
+    const sub = btn.querySelector("small");
+    const enough = state && state.points >= config.costPerSpin;
+
+    btn.disabled = isSpin || !enough;
+    if (main) main.textContent = isSpin ? "转动中" : "开始";
+    if (sub) sub.textContent = isSpin ? "请稍候" : config.costPerSpin + " 积分";
+
+    const hint = el("stageHint");
+    if (!enough) {
+      hint.innerHTML = `<span class="warn">积分不足</span> — 还差 ${config.costPerSpin - state.points} 分才能继续抽奖`;
+    } else if (config.dailyLimit > 0) {
+      hint.innerHTML = `每次消耗 <b>${config.costPerSpin}</b> 积分 · 今日剩余 <b>${state.spinsLeft}</b> 次`;
+    } else {
+      hint.innerHTML = `每次抽奖消耗 <b>${config.costPerSpin}</b> 积分`;
+    }
+  }
+
+  /* ======================= 抽奖 ======================= */
+  async function spin() {
+    if (spinning || !state) return;
+    if (state.points < config.costPerSpin) return;
+
+    spinning = true;
+    updateSpinBtn(true);
+
+    let result;
+    try {
+      // 关键：结果由服务端产生，前端只拿 segmentIndex 去转
+      result = await api("POST", "/api/spin");
+    } catch (e) {
+      spinning = false;
+      updateSpinBtn(false);
+      if (e.status === 401) { showLogin(); return; }
+      if (e.code === "INSUFFICIENT_POINTS") {
+        showModal({ icon: "🪙", kicker: "积 分 不 足", title: "积分不够了", desc: e.message, again: false });
+        return;
+      }
+      showModal({ icon: "⚠️", kicker: "出 错 了", title: "请求失败", desc: e.message, again: false });
+      return;
+    }
+
+    animateTo(result.segmentIndex, () => {
+      state.points = result.points;
+      state.totalSpins = result.totalSpins;
+      state.spinsLeft = result.spinsLeft;
+      state.history = result.history;
+      state.tier = tierOf(result.points);
+
+      spinning = false;
+      renderAll();
+
+      showModal({
+        icon: result.segment.icon,
+        kicker: result.segment.type === "none" ? "可 惜 没 中" : "恭 喜 中 奖",
+        title: result.segment.label,
+        desc: result.message + ` 当前积分 <span class="hl">${result.points}</span> 分。`,
+        again: result.spinsLeft > 0
+      });
+
+      if (result.segment.type !== "none") {
+        confetti(result.segment.type === "prize" ? 90 : 46);
+      }
+    });
+  }
+
+  function animateTo(index, done) {
+    const n = config.segments.length;
+    const segAngle = 360 / n;
+    const mid = index * segAngle + segAngle / 2;
+
+    const wheel = el("wheel");
+    let target = 360 * 6 - mid;
+    while (target < rotation + 360 * 5) target += 360;
+    rotation = target;
+
+    const my = ++spinToken;
+    wheel.style.transform = `rotate(${rotation}deg)`;
+    syncLabels(-rotation);
+
+    const finish = () => {
+      if (my !== spinToken) return;
+      wheel.removeEventListener("transitionend", onEnd);
+      done();
+    };
+    const onEnd = ev => {
+      if (ev.target !== wheel || ev.propertyName !== "transform") return;
+      finish();
+    };
+    wheel.addEventListener("transitionend", onEnd);
+    setTimeout(finish, 6200);   // 兜底
+  }
+
+  function tierOf(points) {
+    if (points >= 1000) return "钻石";
+    if (points >= 500) return "黄金";
+    if (points >= 200) return "白银";
+    if (points >= 100) return "新人";
+    return "青铜";
+  }
+
+  /* ======================= 弹窗 / 特效 ======================= */
+  function showModal(o) {
+    el("mIco").textContent = o.icon;
+    el("mKicker").textContent = o.kicker;
+    el("mTitle").textContent = o.title;
+    el("mDesc").innerHTML = o.desc;
+    el("mAgain").classList.toggle("hidden", !o.again);
+    el("modal").classList.remove("hidden");
+  }
+  function hideModal() { el("modal").classList.add("hidden"); }
+
+  function confetti(n) {
+    const wrap = document.createElement("div");
+    wrap.className = "confetti";
+    const colors = ["#e8c25a", "#f8e7ae", "#ffffff", "#ff6b81", "#7ee0a8", "#9dc0ff"];
+    for (let i = 0; i < n; i++) {
+      const el2 = document.createElement("i");
+      el2.style.left = Math.random() * 100 + "%";
+      el2.style.background = colors[(Math.random() * colors.length) | 0];
+      el2.style.animationDuration = (1.6 + Math.random() * 1.6) + "s";
+      el2.style.animationDelay = (Math.random() * 0.5) + "s";
+      el2.style.opacity = 0.55 + Math.random() * 0.45;
+      wrap.appendChild(el2);
+    }
+    document.body.appendChild(wrap);
+    setTimeout(() => wrap.remove(), 4200);
+  }
+
+  /* ======================= 登录 / 注册 ======================= */
+  function setMode(m) {
+    mode = m;
+    const isLogin = m === "login";
+    el("btnPrimary").textContent = isLogin ? "登 录" : "注 册 并 领 取 " + config.initialPoints + " 积分";
+    el("toRegister").textContent = isLogin ? "立即注册，送 " + config.initialPoints + " 积分" : "返回登录";
+    el("switchLine").firstChild.textContent = isLogin ? "还没有账号？" : "已经有账号了？";
+    msg("");
+  }
+
+  function msg(text, ok) {
+    const m = el("loginMsg");
+    m.textContent = text || "";
+    m.className = "msg" + (ok ? " ok" : "");
+  }
+
+  function busy(on) {
+    el("btnPrimary").disabled = on;
+  }
+
+  async function submitAuth() {
+    const username = (el("inputUser").value || "").trim();
+    const password = el("inputPass").value || "";
+
+    if (username.length < 2) return msg("账号至少 2 个字符");
+    if (password.length < 4) return msg("密码至少 4 位");
+
+    busy(true);
+    msg("");
+    try {
+      const path = mode === "register" ? "/api/register" : "/api/login";
+      const me = await api("POST", path, { username, password });
+      el("inputUser").value = "";
+      el("inputPass").value = "";
+      enterGame(me);
+    } catch (e) {
+      msg(e.message);
+    } finally {
+      busy(false);
+    }
+  }
+
+  function enterGame(me) {
+    state = me;
+    el("loginView").classList.add("hidden");
+    el("gameView").classList.remove("hidden");
+    rotation = 0;
+    el("wheel").style.transform = "rotate(0deg)";
+    syncLabels(0);
+    renderAll();
+  }
+
+  function showLogin() {
+    state = null;
+    el("gameView").classList.add("hidden");
+    el("loginView").classList.remove("hidden");
+    setMode("login");
+  }
+
+  async function logout() {
+    try { await api("POST", "/api/logout"); } catch (_) { /* 忽略 */ }
+    showLogin();
+  }
+
+  /* ======================= 事件 ======================= */
+  el("btnPrimary").addEventListener("click", submitAuth);
+  el("inputPass").addEventListener("keydown", e => { if (e.key === "Enter") submitAuth(); });
+  el("inputUser").addEventListener("keydown", e => { if (e.key === "Enter") el("inputPass").focus(); });
+  el("toRegister").addEventListener("click", () => setMode(mode === "login" ? "register" : "login"));
+  el("spinBtn").addEventListener("click", spin);
+  el("btnLogout").addEventListener("click", logout);
+  el("mClose").addEventListener("click", hideModal);
+  el("mAgain").addEventListener("click", () => { hideModal(); setTimeout(spin, 160); });
+  el("modal").addEventListener("click", e => { if (e.target === el("modal")) hideModal(); });
+
+  /* ======================= 启动 ======================= */
+  (async function boot() {
+    try {
+      config = await api("GET", "/api/config");
+    } catch (e) {
+      msg("后端未就绪：" + e.message);
+      return;
+    }
+    setMode("login");
+    buildWheel();
+    renderOdds();
+
+    try {
+      const me = await api("GET", "/api/me");
+      enterGame(me);
+    } catch (_) {
+      showLogin();
+    }
+  })();
+})();
+</script>
+</body>
+</html>

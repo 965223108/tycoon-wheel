@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.tycoon.mapper.SessionMapper">
+
+    <resultMap id="sessionMap" type="com.tycoon.domain.SessionToken">
+        <id     property="token"     column="token"/>
+        <result property="userId"    column="user_id"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO sessions (token, user_id, expires_at, created_at)
+        VALUES (#{token}, #{userId}, #{expiresAt}, #{createdAt})
+    </insert>
+
+    <select id="findValid" resultMap="sessionMap">
+        SELECT token, user_id, expires_at, created_at
+        FROM sessions
+        WHERE token = #{token}
+          AND expires_at &gt; #{now}
+    </select>
+
+    <delete id="deleteByToken">
+        DELETE FROM sessions WHERE token = #{token}
+    </delete>
+
+    <delete id="deleteExpired">
+        DELETE FROM sessions WHERE expires_at &lt; #{now}
+    </delete>
+
+    <select id="countByToken" resultType="int">
+        SELECT COUNT(*) FROM sessions WHERE token = #{token}
+    </select>
+
+</mapper>

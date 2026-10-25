@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    stack: tycoon
+
+scrape_configs:
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Swarm 里用 dns_sd 做服务发现：tasks.<svc> 会解析出所有任务 IP
+  - job_name: tycoon-app
+    metrics_path: /actuator/prometheus
+    dns_sd_configs:
+      - names: ['tasks.tycoon_app']
+        type: A
+        port: 8787
+        refresh_interval: 15s
+
+  - job_name: tycoon-gateway
+    metrics_path: /actuator/prometheus
+    dns_sd_configs:
+      - names: ['tasks.tycoon_gateway']
+        type: A
+        port: 8080
+        refresh_interval: 15s
+
+  - job_name: tycoon-user
+    metrics_path: /actuator/prometheus
+    dns_sd_configs:
+      - names: ['tasks.tycoon_user']
+        type: A
+        port: 8788
+        refresh_interval: 15s
+
+  - job_name: tycoon-admin
+    metrics_path: /actuator/prometheus
+    dns_sd_configs:
+      - names: ['tasks.tycoon_admin']
+        type: A
+        port: 8789
+        refresh_interval: 15s

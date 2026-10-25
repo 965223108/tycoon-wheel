@@ -1,0 +1,31 @@
+# Filebeat：采集 Docker 容器日志 → Elasticsearch
+# 关键：用 grok 把日志里的 SkyWalking traceId 抽成独立字段，
+# 这样在 Kibana 里就能按 traceId 精确检索（message 是 text，直接搜会被分词器切碎）
+filebeat.inputs:
+  - type: container
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+      # 从 "[TID:564d4961...] [thread] logger - msg" 里抽取 traceId
+      - grok:
+          field: message
+          patterns:
+            - '\[TID:(?<trace_id>[0-9a-fA-F]{16,64})(\.[0-9]+)*\]'
+          ignore_failure: true
+      - drop_fields:
+          fields: ["agent.ephemeral_id", "ecs.version", "input.type"]
+          ignore_missing: true
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  index: "tycoon-logs-%{+yyyy.MM.dd}"
+
+# 关闭模板/ILM：8.x 的模板流程会强行走 data stream，带日期的索引名会 400
+setup.template.enabled: false
+setup.ilm.enabled: false
+
+logging.level: info
+logging.to_files: false

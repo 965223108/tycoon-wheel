@@ -1,0 +1,31 @@
+FROM eclipse-temurin:21-jre-alpine
+
+ARG WITH_AGENT=true
+
+RUN apk add --no-cache tzdata curl wget iproute2 && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+
+WORKDIR /app
+COPY user.jar /app/app.jar
+
+# SkyWalking Java Agent（可选，SW_AGENT_ENABLED 控制）
+COPY skywalking-agent/ /app/skywalking-agent/
+RUN set -eux; \
+    for p in apm-mybatis-3.x apm-nacos-client-2.x; do \
+      cp /app/skywalking-agent/optional-plugins/${p}-plugin-*.jar /app/skywalking-agent/plugins/ 2>/dev/null || true; \
+    done; \
+    ls /app/skywalking-agent/plugins/ | grep -E 'mybatis|nacos' | sed 's/^/enabled: /'
+
+COPY entrypoint-dubbo.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=60 -XX:+UseG1GC -Xss512k -Duser.timezone=Asia/Shanghai" \
+    SW_AGENT_ENABLED=false \
+    SW_AGENT_NAME=tycoon-user \
+    SW_AGENT_COLLECTOR=skywalking-oap:11800
+
+EXPOSE 8788
+EXPOSE 20881
+
+ENTRYPOINT ["/app/entrypoint.sh"]

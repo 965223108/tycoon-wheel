@@ -1,0 +1,71 @@
+# ==========================================================
+# tycoon-gateway  ——  Nacos 配置中心 data-id: tycoon-gateway.yaml
+# ==========================================================
+server:
+  port: ${SERVER_PORT:8080}
+  address: 0.0.0.0
+
+spring:
+  cloud:
+    nacos:
+      discovery:
+        service: tycoon-gateway
+        group: DEFAULT_GROUP
+
+    loadbalancer:
+      cache:
+        ttl: 3s
+        capacity: 256
+
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+
+      routes:
+        - id: tycoon-admin
+          uri: lb://tycoon-admin
+          predicates:
+            - Path=/api/admin/**,/admin/**
+
+        - id: tycoon-wheel
+          uri: lb://tycoon-wheel
+          predicates:
+            - Path=/**
+
+      default-filters:
+        - name: Retry
+          args:
+            retries: 2
+            methods: GET
+            series: SERVER_ERROR
+            exceptions:
+              - java.io.IOException
+              - java.util.concurrent.TimeoutException
+
+      httpclient:
+        connect-timeout: 2000
+        response-timeout: 10s
+
+# ---------------- 网关鉴权 ----------------
+gateway:
+  jwt:
+    # 必须与 tycoon-admin 的 admin.jwt.secret 完全一致
+    secret: ${JWT_SECRET:tycoon-admin-jwt-secret-please-change-in-production-0123456789}
+    issuer: tycoon-admin
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,prometheus
+  metrics:
+    tags:
+      application: tycoon-gateway
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+    org.springframework.security: INFO
+    com.alibaba.nacos: WARN

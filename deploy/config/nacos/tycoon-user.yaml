@@ -1,0 +1,82 @@
+# ==========================================================
+# tycoon-user  ——  Nacos 配置中心 data-id: tycoon-user.yaml
+# ==========================================================
+server:
+  port: ${SERVER_PORT:8788}
+  address: 0.0.0.0
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:tycoon}?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${DB_USER:tycoon}
+    password: ${DB_PASSWORD:tycoon123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: user-pool
+      maximum-pool-size: 8
+      minimum-idle: 2
+      connection-timeout: 5000
+
+  sql:
+    init:
+      mode: ${SQL_INIT_MODE:always}
+      schema-locations: classpath:schema.sql
+
+  cloud:
+    nacos:
+      discovery:
+        service: tycoon-user
+        group: DEFAULT_GROUP
+
+  jackson:
+    default-property-inclusion: non_null
+
+dubbo:
+  application:
+    name: tycoon-user
+    # 应用级注册：Nacos 上只显示应用名 tycoon-user，而不是 providers:com.xxx.Interface::
+    register-mode: application
+    qos-enable: false
+  protocol:
+    name: dubbo
+    port: ${DUBBO_PORT:20881}
+  registry:
+    address: nacos://${NACOS_ADDR:nacos:8848}?namespace=dubbo
+    check: false
+  consumer:
+    check: false
+    timeout: 5000
+  provider:
+    timeout: 5000
+    retries: 0
+    # 默认 200 线程 × 1MB 栈 = 200MB，容器放不下；降到 100（配合 -Xss512k）
+    threads: 100
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.tycoon.user.domain
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: tycoon-user
+
+logging:
+  level:
+    root: INFO
+    com.tycoon: INFO
+    org.apache.dubbo: WARN
+    com.alibaba.nacos: WARN

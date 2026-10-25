@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.tycoon.mapper.SpinRecordMapper">
+
+    <resultMap id="recordMap" type="com.tycoon.domain.SpinRecord">
+        <id     property="id"           column="id"/>
+        <result property="userId"       column="user_id"/>
+        <result property="segmentKey"   column="segment_key"/>
+        <result property="label"        column="label"/>
+        <result property="icon"         column="icon"/>
+        <result property="type"         column="type"/>
+        <result property="pointsDelta"  column="points_delta"/>
+        <result property="pointsAfter"  column="points_after"/>
+        <result property="createdAt"    column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO spin_records
+            (user_id, segment_key, label, icon, type, points_delta, points_after, created_at)
+        VALUES
+            (#{userId}, #{segmentKey}, #{label}, #{icon}, #{type},
+             #{pointsDelta}, #{pointsAfter}, #{createdAt})
+    </insert>
+
+    <select id="findRecent" resultMap="recordMap">
+        SELECT id, user_id, segment_key, label, icon, type,
+               points_delta, points_after, created_at
+        FROM spin_records
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM spin_records
+    </select>
+
+    <select id="countByType" resultType="long">
+        SELECT COUNT(*) FROM spin_records WHERE type = #{type}
+    </select>
+
+    <select id="sumPointsAwarded" resultType="long">
+        SELECT COALESCE(SUM(points_delta), 0)
+        FROM spin_records
+        WHERE type = 'points'
+    </select>
+
+</mapper>

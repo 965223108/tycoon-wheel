@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tycoon.admin.mapper.SegmentMapper">
+
+    <resultMap id="segMap" type="com.tycoon.admin.domain.GameSegment">
+        <id column="id" property="id"/>
+        <result column="idx" property="idx"/>
+        <result column="seg_key" property="segKey"/>
+        <result column="label" property="label"/>
+        <result column="icon" property="icon"/>
+        <result column="type" property="type"/>
+        <result column="description" property="description"/>
+        <result column="percent" property="percent"/>
+        <result column="points" property="points"/>
+        <result column="enabled" property="enabled"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="cols">
+        id, idx, seg_key, label, icon, type, description, percent, points, enabled, created_at, updated_at
+    </sql>
+
+    <select id="listAll" resultMap="segMap">
+        SELECT <include refid="cols"/> FROM game_segments ORDER BY idx ASC, id ASC
+    </select>
+
+    <select id="listEnabled" resultMap="segMap">
+        SELECT <include refid="cols"/> FROM game_segments WHERE enabled = 1 ORDER BY idx ASC, id ASC
+    </select>
+
+    <select id="findById" resultMap="segMap">
+        SELECT <include refid="cols"/> FROM game_segments WHERE id = #{id}
+    </select>
+
+    <select id="findByKey" resultMap="segMap">
+        SELECT <include refid="cols"/> FROM game_segments WHERE seg_key = #{segKey} LIMIT 1
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM game_segments
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO game_segments
+            (idx, seg_key, label, icon, type, description, percent, points, enabled, created_at, updated_at)
+        VALUES
+            (#{idx}, #{segKey}, #{label}, #{icon}, #{type}, #{description}, #{percent}, #{points},
+             #{enabled}, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))
+    </insert>
+
+    <update id="update">
+        UPDATE game_segments
+        SET idx = #{idx},
+            label = #{label},
+            icon = #{icon},
+            type = #{type},
+            description = #{description},
+            percent = #{percent},
+            points = #{points},
+            enabled = #{enabled},
+            updated_at = UTC_TIMESTAMP(3)
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM game_segments WHERE id = #{id}
+    </delete>
+
+    <update id="setEnabled">
+        UPDATE game_segments SET enabled = #{enabled}, updated_at = UTC_TIMESTAMP(3) WHERE id = #{id}
+    </update>
+
+</mapper>
