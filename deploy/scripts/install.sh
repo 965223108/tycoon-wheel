@@ -22,12 +22,20 @@ cyan() { printf '\033[36m%s\033[0m\n' "$*"; }
 green() { printf '\033[32m%s\033[0m\n' "$*"; }
 red() { printf '\033[31m%s\033[0m\n' "$*"; }
 
+# 非 root 且装了 sudo 才用 sudo
+SUDO=""
+if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
+  SUDO="sudo"
+fi
+
 # ---------- 1. 同步部署目录 ----------
 cyan "==> 同步部署文件到 $RUNTIME_DIR"
-sudo mkdir -p "$RUNTIME_DIR"
-sudo rsync -a --delete \
-  --exclude 'scripts' \
-  "$PROJECT_DIR/deploy/" "$RUNTIME_DIR/"
+$SUDO mkdir -p "$RUNTIME_DIR"
+if command -v rsync >/dev/null 2>&1; then
+  $SUDO rsync -a --delete --exclude 'scripts' "$PROJECT_DIR/deploy/" "$RUNTIME_DIR/"
+else
+  $SUDO cp -rf "$PROJECT_DIR/deploy/." "$RUNTIME_DIR/"
+fi
 green "    OK"
 
 # ---------- 2. 等 Nacos ----------
